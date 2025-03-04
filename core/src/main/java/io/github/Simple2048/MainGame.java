@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -12,6 +13,12 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
 import io.github.ColorMaker;
@@ -26,6 +33,10 @@ public class MainGame extends ApplicationAdapter {
     private BitmapFont font;
     private ShapeRenderer shapeRenderer;
     private ScoreManager scoreManager;
+    private Stage stage;
+    private Skin skin;
+    private TextButton restartButton;
+    private boolean gameOverDialogShown = false;
 
     @Override
     public void create() {
@@ -35,8 +46,38 @@ public class MainGame extends ApplicationAdapter {
         board = new Board(scoreManager); // 將遊戲邏輯放在 Board 類中
         shapeRenderer = new ShapeRenderer();
 
-        // 設定輸入處理
-        Gdx.input.setInputProcessor(new InputAdapter() {
+        // 建立 Stage 與 Skin，並建立 Restart 按鈕
+        stage = new Stage();
+        skin = new Skin(Gdx.files.internal("uiskin.json")); // 請確保 uiskin.json 存在於 assets 資料夾
+        restartButton = new TextButton("Restart", skin);
+        restartButton.setSize(100, 50);
+
+        float xPercent = 0.92f; // 代表螢幕寬度的 80%
+        float yPercent = 0.72f; // 代表螢幕高度的 90%
+
+        float x = Gdx.graphics.getWidth() * xPercent;
+        float y = Gdx.graphics.getHeight() * yPercent;
+
+        // 如果你希望按鈕的左下角對齊這個點，可以直接用 setPosition(x, y)。
+        // 如果希望按鈕的右上角對齊 (x, y)，可以減去按鈕的寬高：
+        x -= restartButton.getWidth();
+        y -= restartButton.getHeight();
+
+        restartButton.setPosition(x, y);
+        // 當按下按鈕時，重置遊戲
+        restartButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                restartGame();
+            }
+        });
+        stage.addActor(restartButton);
+
+        // 建立 InputMultiplexer 同時處理 Stage 和鍵盤輸入
+        InputMultiplexer multiplexer = new InputMultiplexer();
+        multiplexer.addProcessor(stage); // 先處理 Stage 輸入
+
+        multiplexer.addProcessor(new InputAdapter() { // 再處理鍵盤輸入
             @Override
             public boolean keyDown(int keycode) {
                 boolean moved = false;
@@ -60,10 +101,16 @@ public class MainGame extends ApplicationAdapter {
                 return true;
             }
         });
+        Gdx.input.setInputProcessor(multiplexer);
     }
 
     @Override
     public void render() {
+        float delta = Gdx.graphics.getDeltaTime();
+
+        // 先讓 stage 更新 (處理按鈕點擊等)
+        stage.act(delta);
+
         Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -114,6 +161,15 @@ public class MainGame extends ApplicationAdapter {
         font.draw(batch, "Score: " + scoreManager.getCurrentScore(), 20, 450);
         font.draw(batch, "High Score: " + scoreManager.getHighScore(), 20, 430);
         batch.end();
+
+        // 如果遊戲結束，彈出對話框 (只彈一次)
+        if (board.isGameOver() && !gameOverDialogShown) {
+            gameOverDialogShown = true;
+            showGameOverDialog();
+        }
+
+        // 最後畫出 Stage 上的 UI (按鈕與對話框)
+        stage.draw();
     }
 
     @Override
@@ -121,5 +177,25 @@ public class MainGame extends ApplicationAdapter {
         batch.dispose();
         font.dispose();
         shapeRenderer.dispose();
+    }
+
+    private void showGameOverDialog() {
+        Dialog gameOverDialog = new Dialog("Game Over", skin) {
+            protected void result(Object object) {
+                // 當玩家按下按鈕時，object 將返回對應的值
+                if (object.equals(true)) {
+                    restartGame();
+                    gameOverDialogShown = false;
+                }
+            }
+        };
+        gameOverDialog.text("No more moves!\nStart next round?");
+        gameOverDialog.button("Next Round", true);
+        gameOverDialog.show(stage);
+    }
+
+    private void restartGame() {
+        scoreManager.reset(); // 重置分數（你可以選擇保留 high score）
+        board = new Board(scoreManager); // 重新建立棋盤
     }
 }

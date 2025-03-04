@@ -148,4 +148,33 @@ public class Board {
         }
         grid = newGrid;
     }
+
+    public boolean isGameOver() {
+        // 如果有空格，就還沒結束
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
+                if (grid[i][j] == 0) {
+                    return false;
+                }
+            }
+        }
+        // 檢查水平相鄰
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE - 1; j++) {
+                if (grid[i][j] == grid[i][j + 1]) {
+                    return false;
+                }
+            }
+        }
+        // 檢查垂直相鄰
+        for (int j = 0; j < SIZE; j++) {
+            for (int i = 0; i < SIZE - 1; i++) {
+                if (grid[i][j] == grid[i + 1][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
 }
