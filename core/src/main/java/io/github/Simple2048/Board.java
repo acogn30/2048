@@ -10,17 +10,30 @@ public class Board {
     public static final int SIZE = 4; // 棋盤尺寸 4x4
     private int[][] grid;
     private Random random = new Random();
+    private ScoreManager scoreManager;
 
-    public Board() {
+
+
+    public Board(ScoreManager scoreManager) {
         grid = new int[SIZE][SIZE];
+        this.scoreManager = scoreManager;
         // 初始化時新增兩個隨機方塊
         addRandomTile();
         addRandomTile();
     }
 
+    public Board() {
+        this(new ScoreManager());
+    }
+
     // 取得指定位置的數值
     public int getCell(int i, int j) {
         return grid[i][j];
+    }
+
+    // 新增一個方法，方便取得目前分數（或直接通過 ScoreManager）
+    public int getScore() {
+        return scoreManager.getCurrentScore();
     }
 
     // 向左滑動與合併
@@ -40,6 +53,8 @@ public class Board {
             for (int j = 0; j < SIZE - 1; j++) {
                 if (newRow[j] != 0 && newRow[j] == newRow[j + 1]) {
                     newRow[j] *= 2;
+                    // 每次合併，把合併後的數值交給 ScoreManager
+                    scoreManager.addScore(newRow[j]);
                     newRow[j + 1] = 0;
                     moved = true;
                 }
@@ -88,10 +103,10 @@ public class Board {
     // 新增隨機方塊，90% 機率新增 2，10% 機率新增 4
     public void addRandomTile() {
         List<int[]> emptyCells = new ArrayList<>();
-        for (int i = 0; i < SIZE; i++){
-            for (int j = 0; j < SIZE; j++){
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
                 if (grid[i][j] == 0) {
-                    emptyCells.add(new int[]{i, j});
+                    emptyCells.add(new int[] { i, j });
                 }
             }
         }
@@ -115,8 +130,8 @@ public class Board {
     // 輔助方法：將棋盤順時針旋轉 90 度
     private void rotateRight() {
         int[][] newGrid = new int[SIZE][SIZE];
-        for (int i = 0; i < SIZE; i++){
-            for (int j = 0; j < SIZE; j++){
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
                 newGrid[j][SIZE - 1 - i] = grid[i][j];
             }
         }
@@ -126,8 +141,8 @@ public class Board {
     // 輔助方法：將棋盤逆時針旋轉 90 度
     private void rotateLeft() {
         int[][] newGrid = new int[SIZE][SIZE];
-        for (int i = 0; i < SIZE; i++){
-            for (int j = 0; j < SIZE; j++){
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
                 newGrid[SIZE - 1 - j][i] = grid[i][j];
             }
         }
